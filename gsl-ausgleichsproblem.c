@@ -1,5 +1,7 @@
+#include <gsl/gsl_linalg.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 /*********************************************************************/
 /*                                                                   */
 /* Es liegen Messdaten "input.dat" in Form von Wertepaaren vor.      */
@@ -60,6 +62,8 @@ void readFile(char *name, double x[], double y[]) {
 
 // Definition der Ansatzfunktionen f1 und f2
 
+double f1(double x) { return (x / (1 + x)); }
+double f2(double x) { return (1 / 2 + x); }
 int main(int argc, char *argv[]) {
   // Abzählen der Wertepaare
   int N = getNumberofPoints("input.dat");
@@ -71,6 +75,15 @@ int main(int argc, char *argv[]) {
 
   double lambda1 = 0.0;  // Koeffizient für die Funktion f1
   double lambda2 = 0.0;  // Koeffizient für die Funktion f2
+  double f1_values[N], f2_values[N];
+  gsl_vector_view f1_vector = gsl_vector_view_array(x, N);
+  gsl_vector_view f2_vector = gsl_vector_view_array(y, N);
+  gsl_vector_fprintf(stdout, &f1_vector.vector, "%g");
+
+  for (size_t i = 0; i < N; i++) {
+    f1_values[N] = f1(N);
+    f2_values[N] = f2(N);
+  }
 
   //_____________________________________________________________________
   // benötigte Variablen einlegen und initialisieren.

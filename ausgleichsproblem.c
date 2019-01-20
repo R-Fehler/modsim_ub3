@@ -179,6 +179,7 @@ int main(int argc, char *argv[]) {
 
   double lambda[2] = {0.0, 0.0};  // Koeffizient für die Funktion f1 , f2
   double mat_A[N][2];
+
   double mat_A_tr[2][N];
   double mat_A_t_A[2][2];
   double vector[1][2];

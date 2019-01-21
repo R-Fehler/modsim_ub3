@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "gsl_blas.h": "c",
+        "gsl_vector.h": "c",
+        "gsl_vector_complex_float.h": "c",
+        "gsl_linalg.h": "c"
+    }
+}

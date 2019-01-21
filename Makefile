@@ -1,10 +1,11 @@
 TARGET := ausgleichsproblem
 SOURCES := $(TARGET).c
 OBJS := $(SOURCES:.c=.o)
-CFLAGS := -Wall -O1
+CFLAGS := -g -Wall -O1 
 LIBS := -lm -lgsl
 INCLUDES := -I/usr/local/include
-CC := $(shell which gcc)
+CC := gcc
+#$(shell which gcc)
 
 all: $(TARGET)
 

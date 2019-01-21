@@ -69,12 +69,32 @@ double f2(double x) { return (1.0 / (2.0 + x)); }
 void printmatrix(int r, int c, double mat[r][c]) {
   for (int i = 0; i < r; i++) {
     for (int j = 0; j < c; j++) {
-      printf("[%d,%d] %3f\t", i, j, mat[i][j]);
+      printf("[%d,%d] %3.2f\t", i, j, mat[i][j]);
     }
     printf("\n");
   }
 }
-
+void gsl_printmatrix(gsl_matrix *mat) {
+  int r, c;
+  r = mat->size1;
+  c = mat->size2;
+  printf("size r: %d c: %d\n", r, c);
+  for (int i = 0; i < r; i++) {
+    for (int j = 0; j < c; j++) {
+      printf("[%d,%d] %3.2f\t", i, j, gsl_matrix_get(mat, i, j));
+    }
+    printf("\n");
+  }
+}
+void gsl_printvector(gsl_vector *vec) {
+  int r;
+  r = vec->size;
+  printf("size r: %d\n", r);
+  for (int i = 0; i < r; i++) {
+    printf("[%d] %3.2f\t", i, gsl_vector_get(vec, i));
+    printf("\n");
+  }
+}
 void m_m_multiply(int m1_rows, int m1_cols, double m1[m1_rows][m1_cols],
                   int m2_rows, int m2_cols, double m2[m2_rows][m2_cols],
                   int r_r, int r_c, double result[r_r][r_c]) {
@@ -101,8 +121,8 @@ void m_m_multiply(int m1_rows, int m1_cols, double m1[m1_rows][m1_cols],
   }
 }
 
-void gsl_gauss(int m1_rows, int m1_cols, double m1[m1_rows][m1_cols], int r_r,
-               int r_c, double vector[r_r][r_c], double result[2]) {
+void gauss(int m1_rows, int m1_cols, double m1[m1_rows][m1_cols], int r_r,
+           int r_c, double vector[r_r][r_c], double result[2]) {
   // Declare pointer variables for two gsl vectors, a matrix,
   // and a permutation list
   gsl_vector *b, *x;
@@ -147,6 +167,27 @@ void gsl_gauss(int m1_rows, int m1_cols, double m1[m1_rows][m1_cols], int r_r,
   gsl_permutation_free(p);
   gsl_matrix_free(A);
 }
+void gsl_gauss(gsl_matrix *A, gsl_vector *b, gsl_vector *result) {
+  // Declare pointer variables for two gsl vectors, a matrix,
+  // and a permutation list
+  gsl_permutation *p;
+  int s;
+
+  // Solve the system A x = b
+  // Start by creating a vector to receive the result
+  // and a permutation list to pass to the LU decomposition
+  p = gsl_permutation_alloc(b->size);
+
+  // Do the LU decomposition on A and use it to solve the system
+  gsl_linalg_LU_decomp(A, p, &s);
+  gsl_linalg_LU_solve(A, p, b, result);
+
+  // Print the result
+  printf("The solution:\n");
+  gsl_vector_fprintf(stdout, result, "%e");
+  // Clean up
+  gsl_permutation_free(p);
+}
 
 void transpose(int m1_rows, int m1_cols, double m1[m1_rows][m1_cols], int r_r,
                int r_c, double result[r_r][r_c]) {
@@ -177,38 +218,59 @@ int main(int argc, char *argv[]) {
   //   Einlesen der Daten
   readFile("input.dat", x, y);
 
-  double lambda[2] = {0.0, 0.0};  // Koeffizient für die Funktion f1 , f2
-  double mat_A[N][2];
+  gsl_matrix *A;
+  gsl_matrix *A_tr;
+  gsl_matrix *A_tr_A;
+  gsl_vector *y_vec;
+  gsl_vector *A_tr_y;
+  gsl_vector *lambda;
 
-  double mat_A_tr[2][N];
-  double mat_A_t_A[2][2];
-  double vector[1][2];
-  double yy[N][1];
+  A = gsl_matrix_alloc(N, 2);
+  A_tr = gsl_matrix_alloc(2, N);
+  A_tr_A = gsl_matrix_alloc(2, 2);
+  y_vec = gsl_vector_alloc(N);
+  lambda = gsl_vector_alloc(2);
+  A_tr_y = gsl_vector_alloc(2);
 
   for (int i = 0; i < N; i++) {
-    mat_A[i][0] = f2(x[i]);
-    mat_A[i][1] = f1(x[i]);
+    gsl_matrix_set(A, i, 0, f2(x[i]));
+    gsl_matrix_set(A, i, 1, f1(x[i]));
   }
-  for (int i = 0; i < N; i++) {
-    yy[i][1] = x[i];
-  }
-  printf("MATRIX A\n");
-  printmatrix(N, 2, mat_A);
-  transpose(N, 2, mat_A, 2, N, mat_A_tr);
-  printf("matrix Atr\n");
-  printmatrix(2, N, mat_A_tr);
-  printf("matrix Atr vollständig\n");
-  m_m_multiply(2, N, mat_A_tr, N, 2, mat_A, 2, 2, mat_A_t_A);
-  printf("MATRIX Atr x A \n");
-  printmatrix(2, 2, mat_A_t_A);
-  printf("matrix a_tr x y\n");
-  m_m_multiply(2, N, mat_A_tr, N, 1, yy, 1, 2, vector);
-  printmatrix(1, 2, vector);
-  gsl_gauss(2, 2, mat_A_t_A, 1, 2, vector, lambda);
 
-  for (int i = 0; i < 2; i++) {
-    printf("lambda %d : %f \n", i, lambda[i]);
+  for (int i = 0; i < N; i++) {
+    gsl_vector_set(y_vec, i, y[i]);
+    // hier die ganze Zeit x[i] anstatt y[i] gehabt!!
   }
+
+  // printf("MATRIX A\n");
+  // printmatrix(N, 2, mat_A);
+  gsl_printmatrix(A);
+  // gsl_matrix_fprintf(stdout, A, "%f");
+
+  // transpose(N, 2, mat_A, 2, N, mat_A_tr);
+  gsl_matrix_transpose_memcpy(A_tr, A);
+  gsl_printmatrix(A_tr);
+  gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, A_tr, A, 0.0, A_tr_A);
+  gsl_printmatrix(A_tr_A);
+
+  // printf("matrix Atr\n");
+  // printmatrix(2, N, mat_A_tr);
+  // printf("matrix Atr vollständig\n");
+  // m_m_multiply(2, N, mat_A_tr, N, 2, mat_A, 2, 2, mat_A_t_A);
+  // printf("MATRIX Atr x A \n");
+  // printmatrix(2, 2, mat_A_t_A);
+  // printf("matrix a_tr x y\n");
+  gsl_blas_dgemv(CblasNoTrans, 1.0, A_tr, y_vec, 0.0, A_tr_y);
+  gsl_printvector(A_tr_y);
+  gsl_gauss(A_tr_A, A_tr_y, lambda);
+  gsl_printvector(lambda);
+  // m_m_multiply(2, N, mat_A_tr, N, 1, yy, 1, 2, vector);
+  // printmatrix(1, 2, vector);
+  // gsl_gauss(2, 2, mat_A_t_A, 1, 2, vector, lambda);
+
+  // for (int i = 0; i < 2; i++) {
+  //   printf("lambda %d : %f \n", i, lambda[i]);
+  // }
 
   //_____________________________________________________________________
   // benötigte Variablen einlegen und initialisieren.
@@ -224,13 +286,12 @@ int main(int argc, char *argv[]) {
             " echo "
             " ' reset; set key right top Left box; \n"
             "set term jpeg;\n"
-            "set output plot.jpg;\n"
             " set xrange [0.0:100]; set xlabel \"x\"; \n"
             " set yrange [0.0:0.75]; set ylabel \"y\"; \n"
             " f(x) = %le*x*(1+x)**(-1)+%le*(2+x)**(-1);\n "
             " plot f(x) lt -1 lw 2, \"input.dat\" u 1:2 pt 7;\n"
-            " ' | gnuplot -persist>>test.jpg",
-            lambda[0], lambda[1]);
+            " ' | gnuplot -persist>output.jpg",
+            gsl_vector_get(lambda, 1), gsl_vector_get(lambda, 0));
 
     system(plotbefehl);
   }
